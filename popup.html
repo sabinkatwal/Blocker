@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FocusBlocker</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="panel">
+    <header class="panel-header">
+      <div>
+        <h1>FocusBlocker</h1>
+        <p>Block distractions with a timer.</p>
+      </div>
+      <div class="badge" id="activeCount">0 active</div>
+    </header>
+
+    <section class="form-card">
+      <label for="websiteInput">Website</label>
+      <input id="websiteInput" placeholder="Enter website or domain" autocomplete="off" />
+
+      <div class="row">
+        <div class="field-group">
+          <label for="durationSelect">Duration</label>
+          <select id="durationSelect">
+            <option value="15">15 min</option>
+            <option value="30">30 min</option>
+            <option value="60">1 hour</option>
+            <option value="120">2 hours</option>
+            <option value="240">4 hours</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="field-group custom-duration hidden" id="customDurationGroup">
+          <label for="customDuration">Custom min</label>
+          <input id="customDuration" type="number" min="5" step="5" placeholder="Minutes" />
+        </div>
+      </div>
+
+      <div class="button-row">
+        <button id="addButton" class="primary">Add Block</button>
+        <button id="clearButton" class="secondary">Clear All</button>
+      </div>
+      <div class="status" id="statusMessage"></div>
+    </section>
+
+    <section class="search-card">
+      <div class="search-field">
+        <label for="searchInput">Search blocked websites</label>
+        <input id="searchInput" placeholder="Search active blocks" autocomplete="off" />
+      </div>
+    </section>
+
+    <section class="list-card">
+      <div class="list-header">
+        <h2>Active blocked list</h2>
+        <span id="listCount">0 entries</span>
+      </div>
+      <div class="blocked-list" id="blockedList"></div>
+    </section>
+  </div>
+
+  <script src="utils/storage.js"></script>
+  <script src="utils/timer.js"></script>
+  <script src="utils/validator.js"></script>
+  <script src="utils/helpers.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
