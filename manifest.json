@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "description": "Block distracting websites using timed sessions, notifications, and a modern interface.",
   "icons": {
-    "16": "icons/16.png",
-    "48": "icons/48.png",
+    "16": "icons/main.png",
+    "48": "icons/main.png",
     "128": "icons/main.png"
   },
   "action": {
