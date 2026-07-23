@@ -14,7 +14,10 @@ function normalizeDomain(input) {
     .replace(/^https?:\/\//, '')
     .replace(/^www\./, '')
     .replace(/\/.*$/, '')
-    .replace(/:\d+$/, '');
+    .replace(/\?.*$/, '')
+    .replace(/#.*$/, '')
+    .replace(/:\d+$/, '')
+    .replace(/\.$/, '');
 
   if (!allowedDomainPattern.test(normalized)) {
     return null;
@@ -24,5 +27,11 @@ function normalizeDomain(input) {
 }
 
 function isDuplicateDomain(domain, blockedWebsites) {
-  return blockedWebsites.some((entry) => entry.domain === domain);
+  if (!domain || !Array.isArray(blockedWebsites)) {
+    return false;
+  }
+  const normalized = domain.toLowerCase();
+  return blockedWebsites.some(
+    (entry) => entry.domain && entry.domain.toLowerCase() === normalized
+  );
 }

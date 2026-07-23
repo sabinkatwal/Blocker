@@ -3,30 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Blocked | FocusBlocker</title>
+  <title>Cozy break | FocusBlocker</title>
   <link rel="stylesheet" href="blocked.css" />
 </head>
 <body>
   <main class="blocked-shell">
     <div class="blocked-card">
-      <span class="emoji">🚫</span>
-      <h1>Website Blocked</h1>
+      <span class="emoji">🕯️</span>
+      <h1>Time for a cozy break</h1>
       <p class="blocked-domain" id="blockedDomain">Loading...</p>
       <div class="badge-row">
         <div class="badge-item">
           <span>Remaining</span>
-          <strong id="remainingTime">00:00:00</strong>
+          <strong id="remainingTime" aria-live="polite">00:00:00</strong>
         </div>
         <div class="badge-item">
-          <span>Current time</span>
-          <strong id="currentTime">00:00</strong>
+          <span>Right now</span>
+          <strong id="currentTime" aria-live="polite">00:00</strong>
         </div>
       </div>
       <p class="quote" id="quoteText">Stay focused and keep moving toward your goals.</p>
       <p class="tip" id="productivityTip">Use short bursts of attention to get more done.</p>
       <div class="button-row">
-        <button id="backButton">Back</button>
-        <button id="openPopupButton">Open Popup</button>
+        <button id="backButton" type="button">Not yet, take me back</button>
+        <button id="openPopupButton" type="button">Open FocusBlocker</button>
       </div>
     </div>
   </main>

@@ -1,6 +1,14 @@
 function createBlockEntry(domain, durationMs) {
+  if (!domain || typeof domain !== 'string') {
+    throw new Error('createBlockEntry: domain must be a non-empty string');
+  }
+  if (!Number.isFinite(durationMs) || durationMs <= 0) {
+    throw new Error('createBlockEntry: durationMs must be a positive number');
+  }
+
   const now = Date.now();
   return {
+    id: `${domain}-${now}`,
     domain,
     startTime: now,
     endTime: now + durationMs,
@@ -24,6 +32,10 @@ function shouldNotifyFiveMin(entry) {
 
   const remainingMs = entry.endTime - Date.now();
   return remainingMs <= 5 * 60 * 1000 && remainingMs > 0;
+}
+
+function shouldNotifyEnded(entry) {
+  return !entry.notifiedEnded && isExpired(entry);
 }
 
 function formatCountdown(milliseconds) {

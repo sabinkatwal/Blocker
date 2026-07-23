@@ -1,20 +1,43 @@
 function getHostnameFromUrl(url) {
-  try {
-    const normalizedUrl = url.trim();
-    const parsed = new URL(normalizedUrl);
-    return parsed.hostname.replace(/^www\./, '').toLowerCase();
-  } catch (error) {
+  if (typeof url !== 'string' || !url.trim()) {
     return null;
+  }
+
+  const normalizedUrl = url.trim();
+
+  try {
+    return new URL(normalizedUrl).hostname.replace(/^www\./, '').toLowerCase();
+  } catch (error) {
+    try {
+      return new URL(`https://${normalizedUrl}`).hostname.replace(/^www\./, '').toLowerCase();
+    } catch (fallbackError) {
+      return null;
+    }
   }
 }
 
 function isDomainMatch(hostname, blockedDomain) {
-  const normalizedHostname = hostname.replace(/^www\./, '').toLowerCase();
-  const normalizedBlocked = blockedDomain.toLowerCase();
-
-  if (normalizedHostname === normalizedBlocked) {
-    return true;
+  if (!hostname || !blockedDomain) {
+    return false;
   }
 
-  return normalizedHostname.endsWith(`.${normalizedBlocked}`);
+  const normalizedHostname = hostname.replace(/^www\./, '').toLowerCase();
+  const normalizedBlocked = blockedDomain.replace(/^www\./, '').toLowerCase();
+
+  if (!normalizedBlocked) {
+    return false;
+  }
+
+  return (
+    normalizedHostname === normalizedBlocked ||
+    normalizedHostname.endsWith(`.${normalizedBlocked}`)
+  );
+}
+
+function isUrlBlocked(url, blockedDomains) {
+  const hostname = getHostnameFromUrl(url);
+  if (!hostname || !Array.isArray(blockedDomains)) {
+    return false;
+  }
+  return blockedDomains.some((domain) => isDomainMatch(hostname, domain));
 }

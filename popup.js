@@ -22,6 +22,14 @@ let blockedWebsites = [];
 let filteredWebsites = [];
 let countdownInterval = null;
 
+function debounce(fn, delayMs) {
+  let timeoutId = null;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delayMs);
+  };
+}
+
 function updateCustomFieldVisibility() {
   const isCustom = durationSelect.value === 'custom';
   customDurationGroup.classList.toggle('hidden', !isCustom);
@@ -40,6 +48,8 @@ function renderBlockedList() {
     return;
   }
 
+  const fragment = document.createDocumentFragment();
+
   filteredWebsites.forEach((entry) => {
     const item = document.createElement('div');
     item.className = 'block-item';
@@ -53,15 +63,18 @@ function renderBlockedList() {
 
     const meta = document.createElement('div');
     meta.className = 'meta';
-    meta.innerHTML = `
-      <span>Ends: ${formatTime(new Date(entry.endTime))}</span>
-      <span>Started: ${formatTime(new Date(entry.startTime))}</span>
-    `;
+    const endsSpan = document.createElement('span');
+    endsSpan.textContent = `Ends: ${formatTime(new Date(entry.endTime))}`;
+    const startedSpan = document.createElement('span');
+    startedSpan.textContent = `Started: ${formatTime(new Date(entry.startTime))}`;
+    meta.appendChild(endsSpan);
+    meta.appendChild(startedSpan);
 
     const actions = document.createElement('div');
     actions.className = 'block-actions';
 
     const removeButton = document.createElement('button');
+    removeButton.type = 'button';
     removeButton.className = 'remove-button';
     removeButton.textContent = 'Remove';
     removeButton.addEventListener('click', () => removeBlockedWebsite(entry.domain));
@@ -71,31 +84,52 @@ function renderBlockedList() {
     item.appendChild(countdown);
     item.appendChild(meta);
     item.appendChild(actions);
-    blockedList.appendChild(item);
+    fragment.appendChild(item);
   });
 
+  blockedList.appendChild(fragment);
   listCount.textContent = `${filteredWebsites.length} entries`;
   activeCount.textContent = `${blockedWebsites.length} active`;
 }
 
 function refreshCountdown() {
   const entries = Array.from(blockedList.getElementsByClassName('block-item'));
+  let anyExpired = false;
+
   filteredWebsites.forEach((entry, index) => {
-    const countdown = entries[index].querySelector('.countdown-text');
+    const remainingMs = getRemainingMs(entry);
+    if (remainingMs <= 0) {
+      anyExpired = true;
+    }
+    const countdown = entries[index]?.querySelector('.countdown-text');
     if (countdown) {
-      countdown.textContent = `${formatCountdown(getRemainingMs(entry))} remaining`;
+      countdown.textContent = `${formatCountdown(remainingMs)} remaining`;
     }
   });
+
+  if (anyExpired) {
+    loadState();
+  }
 }
 
 async function loadState() {
-  const state = await getFullStorage();
-  blockedWebsites = state.blockedWebsites || [];
-  renderBlockedList();
+  try {
+    const state = await getFullStorage();
+    blockedWebsites = state.blockedWebsites || [];
+    renderBlockedList();
+  } catch (error) {
+    displayStatus('Could not load blocked list.');
+  }
 }
 
 async function saveBlockedWebsites() {
-  await setStorageValue({ blockedWebsites });
+  try {
+    await setStorageValue({ blockedWebsites });
+    return true;
+  } catch (error) {
+    displayStatus('Could not save changes. Please try again.');
+    return false;
+  }
 }
 
 function displayStatus(message, isError = true) {
@@ -137,9 +171,15 @@ async function addBlockedWebsite() {
   }
 
   const newEntry = createBlockEntry(domain, durationMs);
-  blockedWebsites.unshift(newEntry);
+  const previous = blockedWebsites;
+  blockedWebsites = [newEntry, ...blockedWebsites];
 
-  await saveBlockedWebsites();
+  const saved = await saveBlockedWebsites();
+  if (!saved) {
+    blockedWebsites = previous;
+    return;
+  }
+
   renderBlockedList();
   websiteInput.value = '';
   customDuration.value = '';
@@ -149,19 +189,40 @@ async function addBlockedWebsite() {
 }
 
 async function removeBlockedWebsite(domain) {
+  const previous = blockedWebsites;
   blockedWebsites = blockedWebsites.filter((entry) => entry.domain !== domain);
-  await saveBlockedWebsites();
+  const saved = await saveBlockedWebsites();
+  if (!saved) {
+    blockedWebsites = previous;
+    return;
+  }
   renderBlockedList();
 }
 
 async function clearAllBlockedWebsites() {
+  const previous = blockedWebsites;
   blockedWebsites = [];
-  await saveBlockedWebsites();
+  const saved = await saveBlockedWebsites();
+  if (!saved) {
+    blockedWebsites = previous;
+    return;
+  }
   renderBlockedList();
 }
 
-function handleSearch() {
-  renderBlockedList();
+const handleSearch = debounce(() => renderBlockedList(), 150);
+
+function handleWebsiteInputKeydown(event) {
+  if (event.key === 'Enter') {
+    addBlockedWebsite();
+  }
+}
+
+function handleStorageChanged(changes, area) {
+  if (area === 'local' && changes.blockedWebsites) {
+    blockedWebsites = changes.blockedWebsites.newValue || [];
+    renderBlockedList();
+  }
 }
 
 function bindEvents() {
@@ -169,6 +230,14 @@ function bindEvents() {
   addButton.addEventListener('click', addBlockedWebsite);
   clearButton.addEventListener('click', clearAllBlockedWebsites);
   searchInput.addEventListener('input', handleSearch);
+  websiteInput.addEventListener('keydown', handleWebsiteInputKeydown);
+  customDuration.addEventListener('keydown', handleWebsiteInputKeydown);
+  chrome.storage.onChanged.addListener(handleStorageChanged);
+  window.addEventListener('beforeunload', () => {
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+    }
+  });
 }
 
 function startCountdownTimer() {
