@@ -86,12 +86,12 @@ async function refreshActiveBlocks() {
   }
 }
 
-async function redirectIfBlocked(tab, activeBlocks) {
-  if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+async function redirectIfBlockedUrl(tabId, url, activeBlocks) {
+  if (!url || url.startsWith('chrome://') || url.startsWith('chrome-extension://')) {
     return;
   }
 
-  const pageHost = getHostnameFromUrl(tab.url);
+  const pageHost = getHostnameFromUrl(url);
   if (!pageHost) {
     return;
   }
@@ -99,17 +99,21 @@ async function redirectIfBlocked(tab, activeBlocks) {
   for (const block of activeBlocks) {
     if (isDomainMatch(pageHost, block.domain)) {
       const redirectUrl = chrome.runtime.getURL(`blocked.html?target=${encodeURIComponent(block.domain)}`);
-      if (tab.url !== redirectUrl) {
-        chrome.tabs.update(tab.id, { url: redirectUrl });
+      if (url !== redirectUrl) {
+        chrome.tabs.update(tabId, { url: redirectUrl });
       }
       return;
     }
   }
 }
 
+async function redirectIfBlocked(tab, activeBlocks) {
+  return redirectIfBlockedUrl(tab.id, tab.url, activeBlocks);
+}
+
 async function handleTabUpdated(tabId, changeInfo, tab) {
   try {
-    if (changeInfo.status !== 'complete' || !tab.url) {
+    if (!tab.url || !changeInfo || !['loading', 'complete'].includes(changeInfo.status)) {
       return;
     }
 
@@ -157,6 +161,23 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 chrome.tabs.onUpdated.addListener(handleTabUpdated);
+
+chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+  if (details.frameId !== 0 || !details.url) {
+    return;
+  }
+
+  refreshActiveBlocks()
+    .then((activeBlocks) => {
+      if (!activeBlocks) {
+        return;
+      }
+      return redirectIfBlockedUrl(details.tabId, details.url, activeBlocks);
+    })
+    .catch((error) => {
+      console.error('FocusBlocker: failed to intercept navigation', error);
+    });
+}, { url: [{ urlPrefix: 'http://' }, { urlPrefix: 'https://' }] });
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.blockedWebsites) {

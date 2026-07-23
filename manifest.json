@@ -20,7 +20,8 @@
     "tabs",
     "alarms",
     "notifications",
-    "activeTab"
+    "activeTab",
+    "webNavigation"
   ],
   "host_permissions": [
     "<all_urls>"
